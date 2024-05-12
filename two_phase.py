@@ -133,11 +133,13 @@ def phase1_into_phase2_prob(full_q, para, expected_quality, sampletimes = 100000
         prob_per_combination[tuple(combination)] = np.zeros(len(q))     #init每个combination的概率
 
     s_samples = np.zeros((len(q),sampletimes, m)) # stores the samples of phase 1. s_samples[i][j] is the jth sample's ith paper.
-    # print(p)
+
     # print(np.sum(np.array(p)))
+    # print(prob_for_sampling.values()[i])
     for i in range(len(q)):
         number_samples = np.random.choice(len(combinations), sampletimes, p = [j[i] for j in list(prob_for_sampling.values())])
-        #这里因为np.random.choice不支持抽dict,所以只能先抽index，再找到对应的dict
+        #这里因为np.random.choice只能抽一维的,所以只能先抽index，再找到对应的dict
+
         s_samples[i] =  np.array([combinations[s] for s in number_samples])
 
  
@@ -222,14 +224,14 @@ def phase2(para, q, prob_per_combination_phase1):
 def test():
     q = np.array([9,8,7,6,5,4,3,2,1,0])
     para = TwoPhaseParams(10, 3, 5, 5.5, 1.5,-0.513, 5.5, 5.0, 5.6, 1, 10)
-    q = sample_q(para, 100)
+    q = sample_q(para, 20)
     print(q.shape)
     prior_s_prob = Compute_s_prior_prob(para)
     expected_quality = Expected_quality_of_combinations(para, prior_s_prob)
-    prob_all=np.zeros((100,10))
-    prob_per_combination = np.empty(1000, dtype=dict)
-    acc_prob = np.zeros((100,10))
-    for i in range(100):
+    prob_all=np.zeros((20,10))
+    prob_per_combination = np.empty(20, dtype=dict)
+    acc_prob = np.zeros((20,10))
+    for i in range(20):
         prob_all[i] , prob_per_combination[i] = phase1_into_phase2_prob(q[i], para, expected_quality)
         acc_prob[i] = phase2(para, q[i], prob_per_combination[i])
     print(np.average(acc_prob, axis = 0))
