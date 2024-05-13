@@ -13,6 +13,7 @@ from datetime import datetime
 import math
 from math import factorial
 from scipy import integrate
+import time
 
 class TwoPhaseParams:
     def __init__(self, n, m, m1, mu_q, sig_q,t, t1, t2, t_acc, minScore = 1, maxScore = 10 ):
@@ -82,7 +83,7 @@ def Expected_quality_of_combinations( para , prior_s_prob, integSigmaFactor = 5)
     expected_quality = {}
 
     for combination in itertools.combinations_with_replacement(range(minScore, maxScore+1), m):
-
+    # for combination in [tuple(i,j,k) for i in range(minScore, maxScore+1) for j in range(minScore, maxScore+1) for k in range(minScore, maxScore+1)]:
         def func(x): # q * P(s|q)P(q)/P(s)
             return x*                                                                                   \
                     norm.pdf(x,mu_q, sig_q) *                                                           \
@@ -90,7 +91,8 @@ def Expected_quality_of_combinations( para , prior_s_prob, integSigmaFactor = 5)
                     (np.sum(np.exp(t * (scores[:] - x) ** 2) , axis = 0)) for k in combination]))/      \
                     prior_s_prob[tuple(combination)]
         expect_quality = integrate.quad(func, mu_q - integSigmaFactor * sig_q, mu_q + integSigmaFactor * sig_q)
-        expected_quality[tuple(combination)] = expect_quality[0]
+        for i in set(itertools.permutations(combination)):
+            expected_quality[i] = expect_quality[0]
 
     return expected_quality
 
@@ -110,42 +112,44 @@ def count_permutations(t):
     return total_permutations
 
 
-def sample_s(para,m, q, sampletimes = 10000):
+def sample_s(para, q, sampletimes = 10000):
     t = para.t
     # q = np.array([full_q[i] for i in range(math.ceil(len(full_q)/2))])
     q_reshape = q[np.newaxis, :]
-    combinations = []
     prob_for_sampling = {}
     scores = np.arange(para.minScore, para.maxScore+1)
-    for combination in itertools.combinations_with_replacement(range(para.minScore, para.maxScore+1), m):
-        combinations.append(tuple(combination))
-        prob_of_combination = np.exp(t*(np.array(combination)[:, np.newaxis] - q_reshape)**2) \
-                            / np.sum(np.exp(t*(scores[:, np.newaxis] - q_reshape)**2), axis = 0)#算ombination中每个s的概率
-        prob_for_sampling[tuple(combination)] = np.prod(prob_of_combination, axis = 0) * count_permutations(combination) #算combination的概率，乘组合数
+    for i in range(para.minScore, para.maxScore+1):
 
-    s_samples = np.zeros((len(q),sampletimes, m))
+        prob_of_i = np.exp(t*(np.array([i])[:, np.newaxis] - q_reshape)**2) \
+                            / np.sum(np.exp(t*(scores[:, np.newaxis] - q_reshape)**2), axis = 0)#算i中每个s的概率
+        prob_for_sampling[i] = prob_of_i
+
+    s_samples = np.zeros((len(q),sampletimes*para.m1))
+
+
     for i in range(len(q)):
-        number_samples = np.random.choice(len(combinations), sampletimes, p = [j[i] for j in list(prob_for_sampling.values())])
-        #这里因为np.random.choice只能抽一维的,所以只能先抽index，再找到对应的dict
+        s_samples[i] = np.random.choice(range(para.minScore, para.maxScore+1), sampletimes*para.m1, p = [j[0][i] for j in list(prob_for_sampling.values())])
 
-        s_samples[i] =  np.array([combinations[s] for s in number_samples])
-
+    s_samples = s_samples.reshape(len(q),sampletimes, para.m1)
     s_samples = np.transpose(s_samples, (1, 0, 2))
     #维度换一下，现在s_samples[j][i]是第j次抽样的第i个paper
     return s_samples
 
-def phase1_into_phase2_prob(full_q, para,s_samples, expected_quality, sampletimes = 100000):
+def two_phase(full_q, para,s_samples, expected_quality):
 
     # t = para.t
     t1 = para.t1
     t2 = para.t2
+    t_acc = para.t_acc
+    m = para.m
+    m1  = para.m1
     # m = para.m
     # scores = np.arange(para.minScore, para.maxScore+1)
 
     # q = np.array([full_q[i] for i in range(math.ceil(len(full_q)/2))]) # here q is the first half of the full_q
     # q_reshape = q[np.newaxis, :]
     # prob_for_sampling = {}  #采样每一个组合的概率
-    prob_per_combination ={}
+    # prob_per_combination ={}
     # combinations = []
     # for combination in itertools.combinations_with_replacement(range(para.minScore, para.maxScore+1), m):
         # prob_of_combination = np.exp(t*(np.array(combination)[:, np.newaxis] - q_reshape)**2) \
@@ -169,106 +173,86 @@ def phase1_into_phase2_prob(full_q, para,s_samples, expected_quality, sampletime
     #维度换一下，现在s_samples[j][i]是第j次抽样的第i个paper
     # print(s_samples)
     # print(s_samples)
-    outcome_of_samples = np.zeros((len(s_samples), len(full_q)))  # stores the result of phase 1. outcome_of_samples[j][i] = 1 means jth sample's ith paper is into phase 2.
-    
+    p1outcome_of_samples = np.zeros((len(s_samples), len(full_q)))  # stores the result of phase 1. outcome_of_samples[j][i] = 1 means jth sample's ith paper is into phase 2.
+    p2outcome_of_samples = np.zeros((len(s_samples), len(full_q)))
 
     for index, sample in enumerate(s_samples):                  # indexth sample
-        outcome_of_a_sample_set = np.zeros(len(full_q))         # stores the result of phase 1 of a set. outcome_of_a_sample_set[i] = 1 means ith paper is into phase 2.
+        p1outcome_of_a_sample_set = np.zeros(len(full_q))         # stores the result of phase 1 of a set. outcome_of_a_sample_set[i] = 1 means ith paper is into phase 2.
+        p2outcome_of_a_sample_set = np.zeros(len(full_q))
         ifall = 1                                              # 是否前i个paper都进了phase2
         for i, s in enumerate(sample):  # ith paper in the sample
 
+            if expected_quality[tuple(s[0 : m])] > t1:   #如果这个s的质量大于t1，那么这个paper就进入phase2 
+                p1outcome_of_a_sample_set[i] = 1
+                if np.sum(s) >= t_acc * m1:                       
+                    p2outcome_of_a_sample_set[i] = 1
 
-            if tuple(s) not in prob_per_combination.keys():
-                prob_per_combination[tuple(s)] = np.zeros(math.ceil(len(full_q)/2))#如果不存在先init
-
-
-            if expected_quality[tuple(s)] > t1:  
-                outcome_of_a_sample_set[i] = 1                      #如果这个s的质量大于t1，那么这个paper就进入phase2    
-                
-                prob_per_combination[tuple(s)][i] +=1/sampletimes   #q[i]的这个combination的概率加1/sampletimes
-
-            elif expected_quality[tuple(s)] > t2 and ifall:
-                outcome_of_a_sample_set[i] = 1
-                
-                prob_per_combination[tuple(s)][i] +=1/sampletimes
+            elif expected_quality[tuple(s[0 : m])] > t2 and ifall:
+                p1outcome_of_a_sample_set[i] = 1
+                if np.sum(s) >= t_acc * m1:                       
+                    p2outcome_of_a_sample_set[i] = 1
 
             else:
-                outcome_of_a_sample_set[i] = 0
                 ifall = 0
 
 
         if ifall:
-            outcome_of_a_sample_set = np.ones(len(full_q))          #如果前ceil(n/2)paper进入phase2，那么这个sample就全进入phase2
-        else:
-            for i in range(len(sample), len(full_q)):
-                outcome_of_a_sample_set[i] = 0
-        outcome_of_samples[index] = outcome_of_a_sample_set
+            p1outcome_of_a_sample_set = np.ones(len(full_q))          #如果前ceil(n/2)paper进入phase2，那么这个sample就全进入phase2
+        
+        p1outcome_of_samples[index] = p1outcome_of_a_sample_set
+        p2outcome_of_samples[index] = p2outcome_of_a_sample_set
         # print(outcome_of_a_sample_set)
 
-    prob_into_phase2 = np.sum(outcome_of_samples, axis = 0)/sampletimes #概率 = 频数/总次数
-    return prob_into_phase2 , prob_per_combination
 
-def phase2(para, q, prob_per_combination_phase1):
-    t_acc = para.t_acc
-    t = para.t
-    m1 = para.m1
-    m = para.m
-    minScore = para.minScore
-    maxScore = para.maxScore
+    return p1outcome_of_samples, p2outcome_of_samples
 
-    scores = np.arange(minScore, maxScore+1) 
+# def phase2(full_q, para, s_samples, phase1_outcome):
+#     t_acc = para.t_acc
 
-    
-
-    # for the first half
-    q1 = np.array([q[i] for i in range(math.ceil(len(q)/2))])
-    q1_reshape = q1[np.newaxis, :]
-    q1_acc_probability = np.zeros(len(q1))
-
-    for combination in itertools.combinations_with_replacement(range(minScore, maxScore), m1-m):
-        for p1_combination in itertools.combinations_with_replacement(range(minScore, maxScore), m):
-            if np.sum(combination)+np.sum(p1_combination) >= t_acc * m1:
-                if tuple(p1_combination) not in prob_per_combination_phase1.keys():
-                    prob_per_combination_phase1[tuple(p1_combination)] = np.zeros(math.ceil(len(q)/2))
-                prob = np.exp(t*(np.array(combination)[:, np.newaxis] - q1_reshape)**2) / np.sum(np.exp(t*(scores[:, np.newaxis] - q1_reshape)**2), axis = 0) 
-                temp = np.prod(prob, axis = 0)* prob_per_combination_phase1[tuple(p1_combination)]*count_permutations(tuple(combination))
-                q1_acc_probability += temp
-                # print("p1:",p1_combination," ","c:",combination," ",temp)
-
-    # print(q1_acc_probability)
-    # for the second half
-    q2 = np.array([q[i] for i in range(math.ceil(len(q)/2), len(q))])
-    q2_reshape = q2[np.newaxis, :]
-    q2_acc_probability = np.zeros(len(q2))
-    for combination in itertools.combinations_with_replacement(range(minScore, maxScore), m1):
-        if np.sum(combination) >= t_acc * m1:
-            prob = np.exp(t*(np.array(combination)[:, np.newaxis] - q2_reshape)**2) / np.sum(np.exp(t*(scores[:, np.newaxis] - q2_reshape)**2), axis = 0) 
-            q2_acc_probability += np.prod(prob, axis = 0)*count_permutations(combination)
+#     m1 = para.m1
 
 
-    q_acc_probability = np.concatenate((q1_acc_probability, q2_acc_probability), axis = 0)
 
-    return q_acc_probability
+
+#     outcome_of_samples = np.zeros((len(s_samples), len(full_q)))
+#     for index, sample in enumerate(s_samples):  
+#         for i, s in enumerate(sample):
+#             if phase1_outcome[index][i] == 1:
+#                 if np.sum(s[0:m1]) > t_acc:
+#                     outcome_of_samples[index][i] = 1
+#                 else:
+#                     outcome_of_samples[index][i] = 0
+#             else:
+#                 outcome_of_samples[index][i] = 0
+
+#     return q_acc_probability
 
 def test():
     q = np.array([9,8,7,6,5,4,3,2,1,0])
     para = TwoPhaseParams(10, 3, 5, 5.5, 1.5,-0.513, 5.5, 5.0, 5.6, 1, 10)
     q = sample_q(para, 20)
     print(q.shape)
-    prior_s_prob = Compute_s_prior_prob(para)
-    expected_quality = Expected_quality_of_combinations(para, prior_s_prob)
-    prob_all=np.zeros((20,10))
-    prob_per_combination = np.empty(20, dtype=dict)
-    acc_prob = np.zeros((20,10))
-    all_s_samples=np.zeros(20,dtype=np.ndarray)
-    for i in range(20):
-        s_samples = sample_s(para, para.m, q[i][0:math.ceil(para.n/2)], 100000)
-        all_s_samples[i] = s_samples
-        prob_all[i] , prob_per_combination[i] = phase1_into_phase2_prob(q[i], para,s_samples, expected_quality)
-        print(prob_all[i])
-        acc_prob[i] = phase2(para, q[i], prob_per_combination[i])
-    print(np.average(acc_prob, axis = 0))
 
+    print("start: ",time.time())
+    prior_s_prob = Compute_s_prior_prob(para)
+    print("compute prior: ",time.time())
+    expected_quality = Expected_quality_of_combinations(para, prior_s_prob)
+    print("compute expected_quality: ",time.time())
+    p1outcome_of_samples = []
+    p2outcome_of_samples = []
+
+    for i in range(20):
+        print("author",i," : ",time.time())
+        s_samples = sample_s(para, q[i], 100000)
+        print("author",i," sampled: ",time.time())
+        p1outcome_of_samples_i, p2outcome_of_samples_i = two_phase(q[i], para, s_samples, expected_quality)
+        p1outcome_of_samples.append(p1outcome_of_samples_i)
+        p2outcome_of_samples.append(p2outcome_of_samples_i)
+        
+    # print(np.average(p1outcome_of_samples, axis = 1))
+    # print(np.average(p2outcome_of_samples, axis = 1))
+    print(np.average(np.average(p1outcome_of_samples, axis = 1), axis = 0))
+    print(np.average(np.average(p2outcome_of_samples, axis = 1), axis = 0))
     # for key in prob_per_combination:
     #     print("key:",key," ",prob_per_combination[key])
     # acc_prob = phase2(para, q, prob_per_combination)
@@ -276,5 +260,6 @@ def test():
     
 
 test()
+
 
 # print( itertools.combinations_with_replacement(range(1, 5),2)[1])
