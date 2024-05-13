@@ -91,7 +91,7 @@ def Expected_quality_of_combinations( para , prior_s_prob, integSigmaFactor = 5)
                     (np.sum(np.exp(t * (scores[:] - x) ** 2) , axis = 0)) for k in combination]))/      \
                     prior_s_prob[tuple(combination)]
         expect_quality = integrate.quad(func, mu_q - integSigmaFactor * sig_q, mu_q + integSigmaFactor * sig_q)
-        for i in set(itertools.permutations(combination)):
+        for i in set(itertools.permutations(combination)): #这里为了避免在two_phase的超大loop里使用排序，于是在expect_quality中存了所有排列 
             expected_quality[i] = expect_quality[0]
 
     return expected_quality
@@ -173,6 +173,8 @@ def two_phase(full_q, para,s_samples, expected_quality):
     #维度换一下，现在s_samples[j][i]是第j次抽样的第i个paper
     # print(s_samples)
     # print(s_samples)
+    review_times = 0
+    accepted_q = []
     p1outcome_of_samples = np.zeros((len(s_samples), len(full_q)))  # stores the result of phase 1. outcome_of_samples[j][i] = 1 means jth sample's ith paper is into phase 2.
     p2outcome_of_samples = np.zeros((len(s_samples), len(full_q)))
 
@@ -186,14 +188,20 @@ def two_phase(full_q, para,s_samples, expected_quality):
                 p1outcome_of_a_sample_set[i] = 1
                 if np.sum(s) >= t_acc * m1:                       
                     p2outcome_of_a_sample_set[i] = 1
+                    accepted_q.append(full_q[i])
+                
+                review_times += m1
 
             elif expected_quality[tuple(s[0 : m])] > t2 and ifall:
                 p1outcome_of_a_sample_set[i] = 1
                 if np.sum(s) >= t_acc * m1:                       
                     p2outcome_of_a_sample_set[i] = 1
+                    accepted_q.append(full_q[i])
+                review_times += m1
 
             else:
                 ifall = 0
+                review_times += m
 
 
         if ifall:
@@ -204,7 +212,7 @@ def two_phase(full_q, para,s_samples, expected_quality):
         # print(outcome_of_a_sample_set)
 
 
-    return p1outcome_of_samples, p2outcome_of_samples
+    return p1outcome_of_samples, p2outcome_of_samples, review_times, accepted_q
 
 # def phase2(full_q, para, s_samples, phase1_outcome):
 #     t_acc = para.t_acc
@@ -240,17 +248,25 @@ def test():
     print("compute expected_quality: ",time.time())
     p1outcome_of_samples = []
     p2outcome_of_samples = []
+    accepted_q = []
+    review_burden = 0
+    sample_times = 100000
+    author_num = 20
 
-    for i in range(20):
+    for i in range(author_num):
         print("author",i," : ",time.time())
-        s_samples = sample_s(para, q[i], 100000)
+        s_samples = sample_s(para, q[i], sample_times)
         print("author",i," sampled: ",time.time())
-        p1outcome_of_samples_i, p2outcome_of_samples_i = two_phase(q[i], para, s_samples, expected_quality)
+        p1outcome_of_samples_i, p2outcome_of_samples_i, review_burden_i, accepted_q_i = two_phase(q[i], para, s_samples, expected_quality)
         p1outcome_of_samples.append(p1outcome_of_samples_i)
         p2outcome_of_samples.append(p2outcome_of_samples_i)
+        accepted_q += accepted_q_i
+        review_burden += review_burden_i
         
     # print(np.average(p1outcome_of_samples, axis = 1))
     # print(np.average(p2outcome_of_samples, axis = 1))
+    print("review_burden: ",review_burden/sample_times/author_num)
+    print("average_q: ",np.average(np.average(accepted_q, axis = 0)))
     print(np.average(np.average(p1outcome_of_samples, axis = 1), axis = 0))
     print(np.average(np.average(p2outcome_of_samples, axis = 1), axis = 0))
     # for key in prob_per_combination:
@@ -258,8 +274,8 @@ def test():
     # acc_prob = phase2(para, q, prob_per_combination)
     # print(acc_prob)
     
-
-test()
+if __name__ == "__main__":
+    test()
 
 
 # print( itertools.combinations_with_replacement(range(1, 5),2)[1])
