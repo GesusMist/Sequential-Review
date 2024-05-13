@@ -178,25 +178,27 @@ def two_phase(full_q, para,s_samples, expected_quality):
     p1outcome_of_samples = np.zeros((len(s_samples), len(full_q)))  # stores the result of phase 1. outcome_of_samples[j][i] = 1 means jth sample's ith paper is into phase 2.
     p2outcome_of_samples = np.zeros((len(s_samples), len(full_q)))
 
-    for index, sample in enumerate(s_samples):                  # indexth sample
+    # for index, sample in enumerate(s_samples):  
+    for i in range(len(s_samples)):                 # indexth sample
         p1outcome_of_a_sample_set = np.zeros(len(full_q))         # stores the result of phase 1 of a set. outcome_of_a_sample_set[i] = 1 means ith paper is into phase 2.
         p2outcome_of_a_sample_set = np.zeros(len(full_q))
         ifall = 1                                              # 是否前i个paper都进了phase2
-        for i, s in enumerate(sample):  # ith paper in the sample
+        # for i, s in enumerate(sample):  # ith paper in the sample
+        for j in range(len(s_samples[i])):
 
-            if expected_quality[tuple(s[0 : m])] > t1:   #如果这个s的质量大于t1，那么这个paper就进入phase2 
-                p1outcome_of_a_sample_set[i] = 1
-                if np.sum(s) >= t_acc * m1:                       
-                    p2outcome_of_a_sample_set[i] = 1
-                    accepted_q.append(full_q[i])
+            if expected_quality[tuple(s_samples[i][j][0 : m])] > t1:   #如果这个s的质量大于t1，那么这个paper就进入phase2 
+                p1outcome_of_a_sample_set[j] = 1
+                if np.sum(s_samples[i][j]) >= t_acc * m1:                       
+                    p2outcome_of_a_sample_set[j] = 1
+                    accepted_q.append(full_q[j])
                 
                 review_times += m1
 
-            elif expected_quality[tuple(s[0 : m])] > t2 and ifall:
-                p1outcome_of_a_sample_set[i] = 1
-                if np.sum(s) >= t_acc * m1:                       
-                    p2outcome_of_a_sample_set[i] = 1
-                    accepted_q.append(full_q[i])
+            elif expected_quality[tuple(s_samples[i][j][0 : m])] > t2 and ifall:
+                p1outcome_of_a_sample_set[j] = 1
+                if np.sum(s_samples[i][j]) >= t_acc * m1:                       
+                    p2outcome_of_a_sample_set[j] = 1
+                    accepted_q.append(full_q[j])
                 review_times += m1
 
             else:
@@ -207,8 +209,8 @@ def two_phase(full_q, para,s_samples, expected_quality):
         if ifall:
             p1outcome_of_a_sample_set = np.ones(len(full_q))          #如果前ceil(n/2)paper进入phase2，那么这个sample就全进入phase2
         
-        p1outcome_of_samples[index] = p1outcome_of_a_sample_set
-        p2outcome_of_samples[index] = p2outcome_of_a_sample_set
+        p1outcome_of_samples[i] = p1outcome_of_a_sample_set
+        p2outcome_of_samples[i] = p2outcome_of_a_sample_set
         # print(outcome_of_a_sample_set)
 
 
