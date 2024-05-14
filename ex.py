@@ -51,8 +51,8 @@ def experiment(m, m1):
     #     s_samples.append(tp.sample_s(para, q[i], 5000))
     
     res = []
-    for t1 in np.arange(4.0, 7.0, 0.4):
-        for t2 in np.arange(4.0, 7.0, 0.4):
+    for t1 in np.arange(3.0, 8.1, 0.5):
+        for t2 in np.arange(3.0, 8.1, 0.5):
             for tacc in np.arange(4.5, 6.6, 1.0):
                 para = tp.TwoPhaseParams(10, m, m1, 5.5, 1.0,-0.513, t1, t2, tacc, 1, 10)
                 print(t1, " ", t2, " ", tacc)
