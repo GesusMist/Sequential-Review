@@ -9,7 +9,7 @@ def test(para, q, expected_quality):
     p2outcome_of_samples = []
     accepted_q = []
     review_burden = 0
-    sample_times = 50
+    sample_times = 5000
     author_num = 1000
     total_num = 0
 
@@ -27,12 +27,12 @@ def test(para, q, expected_quality):
         
     # print(np.average(p1outcome_of_samples, axis = 1))
     # print(np.average(p2outcome_of_samples, axis = 1))
-    print("review_burden: ",review_burden/sample_times/author_num)
+    print("review_burden: ",review_burden/sample_times)
     print("average_q: ",np.average(np.average(accepted_q, axis = 0)))
     print("total_num: ", total_num/sample_times)
     print(time.time())
 
-    return [review_burden/sample_times/author_num, np.average(np.average(accepted_q, axis = 0)), total_num/sample_times]
+    return [review_burden/sample_times, np.sum(np.sum(accepted_q, axis = 0)), total_num/sample_times]
 
 def experiment(m, m1):
     q = []
@@ -45,6 +45,10 @@ def experiment(m, m1):
     para = tp.TwoPhaseParams(10, m, m1, 5.5, 1.0,-0.513, 5.0, 5.0, 5.0, 1, 10)
     prior_s_prob = tp.Compute_s_prior_prob(para)
     expected_quality = tp.Expected_quality_of_combinations(para, prior_s_prob)
+    
+    # s_samples = []
+    # for i in range(1000):
+    #     s_samples.append(tp.sample_s(para, q[i], 5000))
     
     res = []
     for t1 in np.arange(4.0, 7.0, 0.4):
