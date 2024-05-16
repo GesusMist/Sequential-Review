@@ -34,6 +34,16 @@ def sample_q(para, nmc):
     samples = np.random.normal(loc=para.mu_q, scale=para.sig_q, size=(nmc,para.n))
     return np.sort(samples, axis = 1, kind='quicksort')[:,::-1]
 
+# 采样N=1000个作者，每个作者的文章数量服从学来的分布
+def sample_q_dis(para):
+    paper_number_distribution = [0, 659, 177, 73, 27, 26, 10, 8, 20]
+    res = []
+    for i in range(1,9):
+        for j in range(paper_number_distribution[i]):
+            temp_sample = np.random.normal(para.mu_q, para.sig_q, i)
+            res.append(np.sort(temp_sample)[::-1])
+    return res
+
 
 #def Compute_s_prior_prob(mu_q, sig_q, t, minScore, maxScore, m, integSigmaFactor = 5): 
 def Compute_s_prior_prob(para, integSigmaFactor = 5): 
@@ -80,7 +90,8 @@ def Expected_quality_of_combinations( para , prior_s_prob, integSigmaFactor = 5)
     maxScore = para.maxScore
 
     scores = np.arange(minScore, maxScore+1) 
-    expected_quality = {}
+    # expected_quality = {}
+    expected_quality = np.zeros(100000)
 
     for combination in itertools.combinations_with_replacement(range(minScore, maxScore+1), m):
     # for combination in [tuple(i,j,k) for i in range(minScore, maxScore+1) for j in range(minScore, maxScore+1) for k in range(minScore, maxScore+1)]:
@@ -92,7 +103,11 @@ def Expected_quality_of_combinations( para , prior_s_prob, integSigmaFactor = 5)
                     prior_s_prob[tuple(combination)]
         expect_quality = integrate.quad(func, mu_q - integSigmaFactor * sig_q, mu_q + integSigmaFactor * sig_q)
         for i in set(itertools.permutations(combination)): #这里为了避免在two_phase的超大loop里使用排序，于是在expect_quality中存了所有排列 
-            expected_quality[i] = expect_quality[0]
+            # expected_quality[i] = expect_quality[0]
+            temp = 0
+            for j in i:
+                temp = temp * 10 + j - 1
+            expected_quality[temp] = expect_quality[0]
 
     return expected_quality
 
@@ -133,6 +148,7 @@ def sample_s(para, q, sampletimes = 10000):
     s_samples = s_samples.reshape(len(q),sampletimes, para.m1)
     s_samples = np.transpose(s_samples, (1, 0, 2))
     #维度换一下，现在s_samples[j][i]是第j次抽样的第i个paper
+                
     return s_samples
 
 def two_phase(full_q, para,s_samples, expected_quality):
@@ -184,8 +200,18 @@ def two_phase(full_q, para,s_samples, expected_quality):
         p2outcome_of_a_sample_set = np.zeros(len(full_q))
         ifall = 1                                              # 是否前i个paper都进了phase2
         # for i, s in enumerate(sample):  # ith paper in the sample
-        for j in range(math.ceil(len(s_samples[i])/2)):
-            if expected_quality[tuple(s_samples[i][j][0 : m])] > t1:   #如果这个s的质量大于t1，那么这个paper就进入phase2 
+        for j in range(len(s_samples[i])):
+
+            temp = 0
+            for tt in s_samples[i][j][0:m]:
+                temp = temp * 10 + tt - 1
+            temp = int(temp)
+            # print("temp=", end='')
+            # print(temp)
+            # print("tuple=", end='')
+            # print(tuple(s_samples[i][j][0:m]))
+            if expected_quality[temp] > t1:
+            # if expected_quality[tuple(s_samples[i][j][0 : m])] > t1:   #如果这个s的质量大于t1，那么这个paper就进入phase2 
                 p1outcome_of_a_sample_set[j] = 1
                 if np.sum(s_samples[i][j]) >= t_acc * m1:                       
                     p2outcome_of_a_sample_set[j] = 1
@@ -193,7 +219,8 @@ def two_phase(full_q, para,s_samples, expected_quality):
                 
                 review_times += m1
 
-            elif expected_quality[tuple(s_samples[i][j][0 : m])] > t2 and ifall:
+            elif expected_quality[temp] > t2 and ifall:
+            #　elif expected_quality[tuple(s_samples[i][j][0 : m])] > t2 and ifall:
                 p1outcome_of_a_sample_set[j] = 1
                 if np.sum(s_samples[i][j]) >= t_acc * m1:                       
                     p2outcome_of_a_sample_set[j] = 1
@@ -204,7 +231,7 @@ def two_phase(full_q, para,s_samples, expected_quality):
                 ifall = 0
                 review_times += m
 
-        
+                
         if ifall:
             p1outcome_of_a_sample_set = np.ones(len(full_q))          #如果前ceil(n/2)paper进入phase2，那么这个sample就全进入phase2
             for j in range(math.ceil(len(s_samples[i])/2), len(s_samples[i])):
@@ -244,8 +271,8 @@ def two_phase(full_q, para,s_samples, expected_quality):
 def test():
     q = np.array([9,8,7,6,5,4,3,2,1,0])
     para = TwoPhaseParams(10, 3, 5, 5.5, 1.5,-0.513, 5.5, 5.0, 5.6, 1, 10)
-    q = sample_q(para, 20)
-    print(q.shape)
+    q = sample_q_dis(para)
+    #print(q.shape)
 
     print("start: ",time.time())
     prior_s_prob = Compute_s_prior_prob(para)
@@ -256,8 +283,8 @@ def test():
     p2outcome_of_samples = []
     accepted_q = []
     review_burden = 0
-    sample_times = 100000
-    author_num = 20
+    sample_times = 10000
+    author_num = 1000
 
     for i in range(author_num):
         print("author",i," : ",time.time())
