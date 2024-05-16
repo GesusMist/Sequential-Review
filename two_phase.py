@@ -242,6 +242,7 @@ def two_phase(full_q, para,s_samples, expected_quality):
                 if np.sum(s_samples[i][j])>= t_acc * m1:   
                     p2outcome_of_a_sample_set[j] = 1
                     accepted_q.append(full_q[j])
+                review_times += m1
         p1outcome_of_samples[i] = p1outcome_of_a_sample_set
         p2outcome_of_samples[i] = p2outcome_of_a_sample_set
         # print(outcome_of_a_sample_set)
