@@ -204,6 +204,7 @@ def two_phase(full_q, para,s_samples, expected_quality):
     for i in range(len(s_samples)):                 # indexth sample
         p1outcome_of_a_sample_set = np.zeros(len(full_q))         # stores the result of phase 1 of a set. outcome_of_a_sample_set[i] = 1 means ith paper is into phase 2.
         p2outcome_of_a_sample_set = np.zeros(len(full_q))
+        accepted_q_of_a_sample_set = []
         ifall = 1                                              # 是否前i个paper都进了phase2
         # for i, s in enumerate(sample):  
         for j in range(math.ceil(len(s_samples[i]/2))):        #对前n/2个paper
@@ -219,7 +220,7 @@ def two_phase(full_q, para,s_samples, expected_quality):
                 p1outcome_of_a_sample_set[j] = 1                            #进入phase2
                 if np.sum(s_samples[i][j]) >= t_acc * m1:                   # 平均分数 > t_acc 则接受     
                     p2outcome_of_a_sample_set[j] = 1                        # paper被接受
-                    accepted_q.append(full_q[j])
+                    accepted_q_of_a_sample_set.append(full_q[j])
                 
                 review_times += m1
 
@@ -228,7 +229,7 @@ def two_phase(full_q, para,s_samples, expected_quality):
                 p1outcome_of_a_sample_set[j] = 1
                 if np.sum(s_samples[i][j]) >= t_acc * m1:                       
                     p2outcome_of_a_sample_set[j] = 1
-                    accepted_q.append(full_q[j])
+                    accepted_q_of_a_sample_set.append(full_q[j])
                 review_times += m1
 
             else:
@@ -241,8 +242,10 @@ def two_phase(full_q, para,s_samples, expected_quality):
             for j in range(math.ceil(len(s_samples[i]/2)), len(s_samples[i]) ): #review后n/2个paper
                 if np.sum(s_samples[i][j])>= t_acc * m1:   
                     p2outcome_of_a_sample_set[j] = 1
-                    accepted_q.append(full_q[j])
+                    accepted_q_of_a_sample_set.append(full_q[j])
                 review_times += m1
+        
+        accepted_q.append(accepted_q_of_a_sample_set)
         p1outcome_of_samples[i] = p1outcome_of_a_sample_set
         p2outcome_of_samples[i] = p2outcome_of_a_sample_set
         # print(outcome_of_a_sample_set)
