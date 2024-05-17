@@ -9,9 +9,11 @@ def test(para, q, expected_quality):
     p2outcome_of_samples = []
     accepted_q = []
     review_burden = 0
-    sample_times = 5000
+    sample_times = 50
     author_num = 1000
     total_num = 0
+
+    q_all = np.zeros(sample_times)
 
     for i in range(author_num):
         #print("author",i," : ",time.time())
@@ -21,18 +23,29 @@ def test(para, q, expected_quality):
         p1outcome_of_samples_i, p2outcome_of_samples_i, review_burden_i, accepted_q_i = tp.two_phase(q[i], para, s_samples, expected_quality)
         p1outcome_of_samples.append(p1outcome_of_samples_i)
         p2outcome_of_samples.append(p2outcome_of_samples_i)
-        accepted_q += accepted_q_i
+
+        #print(accepted_q_i)
+        for j in range(len(accepted_q_i)):
+            q_all[j] += np.sum(np.array(accepted_q_i[j])/1000)
+
         review_burden += review_burden_i
         total_num += len(accepted_q_i)
+    
+    avg = np.average(q_all)
+    sig = 0.0
+    for i in q_all:
+        sig += (avg - i) ** 2
+    sig /= sample_times
         
     # print(np.average(p1outcome_of_samples, axis = 1))
     # print(np.average(p2outcome_of_samples, axis = 1))
     print("review_burden: ",review_burden/sample_times)
-    print("average_q: ",np.average(np.average(accepted_q, axis = 0)))
+    print("average_q: ", avg)
     print("total_num: ", total_num/sample_times)
+    print("sig_q: ", sig)
     print(time.time())
 
-    return [review_burden/sample_times, np.sum(np.sum(accepted_q, axis = 0)), total_num/sample_times]
+    return [review_burden/sample_times, np.sum(q_all), total_num/sample_times, sig]
 
 def experiment(m, m1):
     q = []
