@@ -9,7 +9,7 @@ def test(para, q, expected_quality):
     p2outcome_of_samples = []
     accepted_q = []
     review_burden = 0
-    sample_times = 50
+    sample_times = 5000
     author_num = 1000
     total_num = 0
 
@@ -27,9 +27,9 @@ def test(para, q, expected_quality):
         #print(accepted_q_i)
         for j in range(len(accepted_q_i)):
             q_all[j] += np.sum(np.array(accepted_q_i[j])/1000)
+            total_num += len(accepted_q_i[j])
 
         review_burden += review_burden_i
-        total_num += len(accepted_q_i)
     
     avg = np.average(q_all)
     sig = 0.0
@@ -69,8 +69,8 @@ def experiment(m, m1):
             for tacc in np.arange(4.5, 6.6, 1.0):
                 para = tp.TwoPhaseParams(10, m, m1, 5.5, 1.0,-0.513, t1, t2, tacc, 1, 10)
                 print(t1, " ", t2, " ", tacc)
-                res.append([test(para, q, expected_quality), [t1, t2, tacc]])
-    np.save("result_"+str(m)+str(m1)+".npy", res)
+                res.append([test(para, q, expected_quality), [t1, t2, tacc, 0]])
+    np.save("result_"+str(m)+str(m1)+"_new.npy", res)
 
 print(sys.argv)
 
