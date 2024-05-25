@@ -151,7 +151,7 @@ def sample_s(para, q, sampletimes = 10000):
                 
     return s_samples
 
-def two_phase(full_q, para,s_samples, expected_quality):
+def two_phase(full_q, para,s_samples, expected_quality, expected_quality_2):
 
     # t = para.t
     t1 = para.t1
@@ -214,11 +214,16 @@ def two_phase(full_q, para,s_samples, expected_quality):
                 temp = temp * 10 + tt - 1
             temp = int(temp)
 
+            temp2 = 0
+            for tt in s_samples[i][j]:
+                temp2 = temp2 * 10 + tt - 1
+            temp2 = int(temp2)
+
 
             if expected_quality[temp] > t1:
             # if expected_quality[tuple(s_samples[i][j][0 : m])] > t1:   #如果这个s的质量大于t1，那么这个paper就进入phase2 
                 p1outcome_of_a_sample_set[j] = 1                            #进入phase2
-                if np.sum(s_samples[i][j]) >= t_acc * m1:                   # 平均分数 > t_acc 则接受     
+                if expected_quality_2[temp2] >= t_acc:                   # 平均分数 > t_acc 则接受     
                     p2outcome_of_a_sample_set[j] = 1                        # paper被接受
                     accepted_q_of_a_sample_set.append(full_q[j])
                 
@@ -227,7 +232,7 @@ def two_phase(full_q, para,s_samples, expected_quality):
             elif expected_quality[temp] > t2 and ifall:                    
             #　elif expected_quality[tuple(s_samples[i][j][0 : m])] > t2 and ifall:
                 p1outcome_of_a_sample_set[j] = 1
-                if np.sum(s_samples[i][j]) >= t_acc * m1:                       
+                if expected_quality_2[temp2] >= t_acc:                       
                     p2outcome_of_a_sample_set[j] = 1
                     accepted_q_of_a_sample_set.append(full_q[j])
                 review_times += m1
@@ -240,7 +245,7 @@ def two_phase(full_q, para,s_samples, expected_quality):
         if ifall:
             p1outcome_of_a_sample_set = np.ones(len(full_q))          #如果前ceil(n/2)paper进入phase2，那么这个sample就全进入phase2
             for j in range(math.ceil(len(s_samples[i]/2)), len(s_samples[i]) ): #review后n/2个paper
-                if np.sum(s_samples[i][j])>= t_acc * m1:   
+                if expected_quality_2[temp2] >= t_acc:   
                     p2outcome_of_a_sample_set[j] = 1
                     accepted_q_of_a_sample_set.append(full_q[j])
                 review_times += m1
