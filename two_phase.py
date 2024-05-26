@@ -91,7 +91,7 @@ def Expected_quality_of_combinations( para , prior_s_prob, integSigmaFactor = 5)
 
     scores = np.arange(minScore, maxScore+1) 
     # expected_quality = {}
-    expected_quality = np.zeros(100000)
+    expected_quality = np.zeros(1000010)
 
     for combination in itertools.combinations_with_replacement(range(minScore, maxScore+1), m):
     # for combination in [tuple(i,j,k) for i in range(minScore, maxScore+1) for j in range(minScore, maxScore+1) for k in range(minScore, maxScore+1)]:
@@ -159,56 +159,20 @@ def two_phase(full_q, para,s_samples, expected_quality, expected_quality_2):
     t_acc = para.t_acc
     m = para.m
     m1  = para.m1
-    ###########################↓废弃代码
-    # m = para.m
-    # scores = np.arange(para.minScore, para.maxScore+1)
-
-    # q = np.array([full_q[i] for i in range(math.ceil(len(full_q)/2))]) # here q is the first half of the full_q
-    # q_reshape = q[np.newaxis, :]
-    # prob_for_sampling = {}  #采样每一个组合的概率
-    # prob_per_combination ={}
-    # combinations = []
-    # for combination in itertools.combinations_with_replacement(range(para.minScore, para.maxScore+1), m):
-        # prob_of_combination = np.exp(t*(np.array(combination)[:, np.newaxis] - q_reshape)**2) \
-                            # / np.sum(np.exp(t*(scores[:, np.newaxis] - q_reshape)**2), axis = 0)#算ombination中每个s的概率
-        # prob_for_sampling[tuple(combination)] = np.prod(prob_of_combination, axis = 0) * count_permutations(combination) #算combination的概率，乘组合数
-        # combinations.append(tuple(combination))     #所有的组合，之后用
-        # prob_per_combination[tuple(combination)] = np.zeros(len(q))     #init每个combination的概率
-
-    # s_samples = np.zeros((len(q),sampletimes, m)) # stores the samples of phase 1. s_samples[i][j] is the jth sample's ith paper.
-
-    # print(np.sum(np.array(p)))
-    # print(prob_for_sampling.values()[i])
-    # for i in range(len(q)):
-        # number_samples = np.random.choice(len(combinations), sampletimes, p = [j[i] for j in list(prob_for_sampling.values())])
-                                    #这里因为np.random.choice只能抽一维的,所以只能先抽index，再找到对应的dict
-
-        # s_samples[i] =  np.array([combinations[s] for s in number_samples])
-
- 
-    # s_samples = np.transpose(s_samples, (1, 0, 2))
-    #维度换一下，现在s_samples[j][i]是第j次抽样的第i个paper
-    # print(s_samples)
-    # print(s_samples)
-
-    #####################↑废弃
-
-
-
     review_times = 0
     accepted_q = []
-    p1outcome_of_samples = np.zeros((len(s_samples), len(full_q)))  # stores the result of phase 1. outcome_of_samples[j][i] = 1 means jth sample's ith paper is into phase 2.
+    p1outcome_of_samples = np.zeros((len(s_samples), len(full_q)))
+    # stores the result of phase 1. outcome_of_samples[j][i] = 1 means jth sample's ith paper is into phase 2.
     p2outcome_of_samples = np.zeros((len(s_samples), len(full_q)))
-
-    # for index, sample in enumerate(s_samples):  
     for i in range(len(s_samples)):                 # indexth sample
-        p1outcome_of_a_sample_set = np.zeros(len(full_q))         # stores the result of phase 1 of a set. outcome_of_a_sample_set[i] = 1 means ith paper is into phase 2.
+        p1outcome_of_a_sample_set = np.zeros(len(full_q))
+        # stores the result of phase 1 of a set. outcome_of_a_sample_set[i] = 1 means ith paper is into phase 2.
         p2outcome_of_a_sample_set = np.zeros(len(full_q))
         accepted_q_of_a_sample_set = []
         ifall = 1                                              # 是否前i个paper都进了phase2
-        # for i, s in enumerate(sample):  
         for j in range(math.ceil(len(s_samples[i]/2))):        #对前n/2个paper
 
+            #为了提高运算速度，将字典改为数组，一个十进制数字的每一位从0到9分别代表审稿分数从1到10
             temp = 0
             for tt in s_samples[i][j][0:m]:
                 temp = temp * 10 + tt - 1
@@ -258,29 +222,7 @@ def two_phase(full_q, para,s_samples, expected_quality, expected_quality_2):
 
     return p1outcome_of_samples, p2outcome_of_samples, review_times, accepted_q
 
-# def phase2(full_q, para, s_samples, phase1_outcome):
-#     t_acc = para.t_acc
-
-#     m1 = para.m1
-
-
-
-
-#     outcome_of_samples = np.zeros((len(s_samples), len(full_q)))
-#     for index, sample in enumerate(s_samples):  
-#         for i, s in enumerate(sample):
-#             if phase1_outcome[index][i] == 1:
-#                 if np.sum(s[0:m1]) > t_acc:
-#                     outcome_of_samples[index][i] = 1
-#                 else:
-#                     outcome_of_samples[index][i] = 0
-#             else:
-#                 outcome_of_samples[index][i] = 0
-
-#     return q_acc_probability
-
 def test():
-    q = np.array([9,8,7,6,5,4,3,2,1,0])
     para = TwoPhaseParams(10, 3, 5, 5.5, 1.5,-0.513, 5.5, 5.0, 5.6, 1, 10)
     q = sample_q_dis(para)
     #print(q.shape)
@@ -320,6 +262,3 @@ def test():
     
 if __name__ == "__main__":
     test()
-
-
-# print( itertools.combinations_with_replacement(range(1, 5),2)[1])
