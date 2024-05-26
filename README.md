@@ -32,8 +32,17 @@ This contains the main implementation of the two-phase mechanism
 | `sample_s` | `para`:`TwoPhaseParams`的实例</br>`q`:一个作者的所有文章质量q</br>`sampletimes`:采样次数 |`s_samples`: `s_samples[j][i]`是第j次抽样的第i个paper分数|这里每次抽样对每篇文章采m1个分数，phase1只用前m个|
 | `test`|无，简陋的测试用 |无，建议print | 直接call就可以简单测试，这里简陋的假设每个n_i是一样的 |
 
+# Experiment
+This contains all the experiment
+
+`ex.py` 调用`two_phase`，根据`t1`,`t2`,`tacc`的范围反复多次实验并将结果保存。运行：python ex.py m m1。
+
+`sample_q.txt` 从均值5.5，方差1.0的正态分布中采样得到1000名作者的论文质量，每个作者的论文数量符合学来的分布。
+
+`analysis.ipynb`: 根据实验结果画图等
 
 
+</br>
 
 # README from the original repo and author
 

@@ -142,6 +142,8 @@ def sample_s(para, q, sampletimes = 10000):
     s_samples = np.zeros((len(q),sampletimes*para.m1))
 
 
+
+    #对于每篇文章(每个q) 采样m1 * sampletimes次
     for i in range(len(q)):
         s_samples[i] = np.random.choice(range(para.minScore, para.maxScore+1), sampletimes*para.m1, p = [j[0][i] for j in list(prob_for_sampling.values())])
 
@@ -231,6 +233,10 @@ def test():
     prior_s_prob = Compute_s_prior_prob(para)
     print("compute prior: ",time.time())
     expected_quality = Expected_quality_of_combinations(para, prior_s_prob)
+    para.m = 5
+    prior_s_prob_m1 = Compute_s_prior_prob(para)
+    expected_quality_2 = Expected_quality_of_combinations(para, prior_s_prob_m1)
+    para.m = 3
     print("compute expected_quality: ",time.time())
     p1outcome_of_samples = []
     p2outcome_of_samples = []
@@ -243,7 +249,7 @@ def test():
         print("author",i," : ",time.time())
         s_samples = sample_s(para, q[i], sample_times)
         print("author",i," sampled: ",time.time())
-        p1outcome_of_samples_i, p2outcome_of_samples_i, review_burden_i, accepted_q_i = two_phase(q[i], para, s_samples, expected_quality)
+        p1outcome_of_samples_i, p2outcome_of_samples_i, review_burden_i, accepted_q_i = two_phase(q[i], para, s_samples, expected_quality, expected_quality_2)
         p1outcome_of_samples.append(p1outcome_of_samples_i)
         p2outcome_of_samples.append(p2outcome_of_samples_i)
         accepted_q += accepted_q_i
