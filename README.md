@@ -6,7 +6,7 @@ This is the Python implementation of the simulation results of the paper under t
 
 This file contains functions of preparing data for testing the mechanism
 Details are listed as follows.
-| Item | Input  |	Output | 功能 |
+| Item | Input  |	Output | Function |
 |:--------:|:--------:|:--------:|:--------:|
 | extract_number | string | score in that string | fetch the score in that line |
 | papers | -  | - | a list stores all the papers' review info | 
@@ -22,7 +22,7 @@ Details are listed as follows.
 This contains the main implementation of the two-phase mechanism
 
 
-| Item | Input  |	Output | 功能/注释   |
+| Item | Input  |	Output | Function/Note   |
 |:--------:|:--------|:--------|:--------|
 | `TwoPhaseParams`| `n`:Just for testing，每个作者的文章数量，随便填，因为真实的ni不同，实验时未用到 <br> `m`,`m1`,`mu_q`, `sig_q`,`t`, `t1`,` t2`, `t_acc`, `minScore = 1`, `maxScore = 10` 是什么都很明显x | N/A | 存参数的类|
 | `Compute_s_prior_prob`| `para`:`TwoPhaseParams`的实例<br> `integSigmaFactor = 5`:因为s的先验是无穷积分，只能近似在`mu_q`± `integSigmaFactor`* `sig_q`的范围算|`prior_s_prob`：字典，`prior_s_prob[(1,2,3)]` = 取到(1,2,3)的概率 |算长度为`para.m`的所有独特s的先验概率|
